@@ -1,18 +1,32 @@
+const DEFAULT_SAVED_PROMPTS = [
+  {
+    name: 'Witty & Concise',
+    prompt:
+      'You are a witty, knowledgeable person on X. Write a concise, engaging reply. No hashtags. Match the conversational tone. Keep it under 280 characters unless the topic demands more depth.',
+  },
+  {
+    name: 'Professional',
+    prompt:
+      'You are a thoughtful business leader. Write a professional, insightful reply that adds value to the conversation. Be direct and substantive. No hashtags.',
+  },
+  {
+    name: 'Challenger',
+    prompt:
+      'You respectfully challenge the premise of this post with a well-reasoned counterpoint. Be direct but not aggressive. Back up your position with logic. No hashtags.',
+  },
+];
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.openai.com/v1/chat/completions',
   model: 'gpt-4o-mini',
-  systemPrompt:
-    'You are a witty, knowledgeable person on X. Write a concise, engaging reply. No hashtags. Match the conversational tone. Keep it under 280 characters unless the topic demands more depth.',
+  systemPrompt: DEFAULT_SAVED_PROMPTS[0].prompt,
   temperature: 0.8,
   maxTokens: 220,
+  savedPrompts: DEFAULT_SAVED_PROMPTS,
 };
 
-const ANTHROPIC_MODELS = [
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-6',
-];
+const ANTHROPIC_MODELS = ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-6'];
 
 const MODEL_FETCH_DEBOUNCE_MS = 1000;
 
@@ -20,6 +34,7 @@ const $ = (id) => document.getElementById(id);
 
 let modelFetchTimer = null;
 let modelFetchSeq = 0;
+let savedPromptsState = [];
 
 init();
 
@@ -34,8 +49,15 @@ async function init() {
   $('temperature').value = merged.temperature;
   $('maxTokens').value = merged.maxTokens;
 
+  savedPromptsState = normalizeSavedPrompts(merged.savedPrompts);
+  renderSavedPrompts();
+
   $('save').addEventListener('click', save);
   $('reset').addEventListener('click', reset);
+
+  $('saveCurrentPrompt').addEventListener('click', saveCurrentPrompt);
+  $('savedPromptsList').addEventListener('click', onSavedPromptAction);
+  $('savedPromptsList').addEventListener('keydown', onSavedPromptKeydown);
 
   $('refreshModels').addEventListener('click', () => refreshModels({ force: true }));
   $('apiKey').addEventListener('input', scheduleRefreshModels);
@@ -53,6 +75,7 @@ async function save() {
     systemPrompt: $('systemPrompt').value.trim(),
     temperature: clamp(Number($('temperature').value), 0, 2, DEFAULT_SETTINGS.temperature),
     maxTokens: clamp(Number($('maxTokens').value), 32, 1024, DEFAULT_SETTINGS.maxTokens),
+    savedPrompts: savedPromptsState,
   };
 
   await chrome.storage.sync.set(payload);
@@ -65,9 +88,125 @@ async function reset() {
     if ($(k)) $(k).value = v;
   });
 
+  savedPromptsState = normalizeSavedPrompts(DEFAULT_SETTINGS.savedPrompts);
+  $('promptName').value = '';
+  renderSavedPrompts();
+
   showManualModelInput();
   $('modelHelp').textContent = 'Defaults restored. Refresh to load models from your provider.';
   setStatus('Defaults restored.');
+}
+
+async function saveCurrentPrompt() {
+  const name = $('promptName').value.trim();
+  const prompt = $('systemPrompt').value.trim();
+
+  if (!name) {
+    setStatus('Add a name for this prompt first.');
+    return;
+  }
+
+  if (!prompt) {
+    setStatus('System prompt is empty. Nothing to save.');
+    return;
+  }
+
+  const existingIdx = savedPromptsState.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
+  const next = [...savedPromptsState];
+
+  if (existingIdx >= 0) {
+    next[existingIdx] = { name, prompt };
+  } else {
+    next.push({ name, prompt });
+  }
+
+  savedPromptsState = next;
+  $('promptName').value = '';
+  renderSavedPrompts();
+  await chrome.storage.sync.set({ savedPrompts: savedPromptsState });
+  setStatus(existingIdx >= 0 ? `Updated "${name}".` : `Saved "${name}".`);
+}
+
+async function onSavedPromptAction(event) {
+  const deleteBtn = event.target.closest('.prompt-delete');
+  if (deleteBtn) {
+    event.stopPropagation();
+    const name = deleteBtn.dataset.name;
+    savedPromptsState = savedPromptsState.filter((item) => item.name !== name);
+    renderSavedPrompts();
+    await chrome.storage.sync.set({ savedPrompts: savedPromptsState });
+    setStatus(`Deleted "${name}".`);
+    return;
+  }
+
+  const pill = event.target.closest('.prompt-pill');
+  if (!pill) return;
+  loadSavedPromptByName(pill.dataset.name);
+}
+
+function onSavedPromptKeydown(event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const pill = event.target.closest('.prompt-pill');
+  if (!pill) return;
+  event.preventDefault();
+  loadSavedPromptByName(pill.dataset.name);
+}
+
+function loadSavedPromptByName(name) {
+  const picked = savedPromptsState.find((item) => item.name === name);
+  if (!picked) return;
+
+  $('systemPrompt').value = picked.prompt;
+  $('promptName').value = picked.name;
+  setStatus(`Loaded "${picked.name}".`);
+}
+
+function renderSavedPrompts() {
+  const list = $('savedPromptsList');
+  list.innerHTML = '';
+
+  if (!savedPromptsState.length) {
+    const empty = document.createElement('p');
+    empty.className = 'saved-prompts-empty';
+    empty.textContent = 'No saved prompts yet. Save one to build your library.';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const item of savedPromptsState) {
+    const pill = document.createElement('div');
+    pill.className = 'prompt-pill';
+    pill.dataset.name = item.name;
+    pill.title = item.prompt;
+    pill.setAttribute('role', 'button');
+    pill.setAttribute('tabindex', '0');
+
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = item.name;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'prompt-delete';
+    remove.dataset.name = item.name;
+    remove.setAttribute('aria-label', `Delete ${item.name}`);
+    remove.textContent = '×';
+
+    pill.appendChild(name);
+    pill.appendChild(remove);
+    list.appendChild(pill);
+  }
+}
+
+function normalizeSavedPrompts(value) {
+  if (!Array.isArray(value)) return [...DEFAULT_SAVED_PROMPTS];
+
+  const normalized = value
+    .filter((item) => item && typeof item.name === 'string' && typeof item.prompt === 'string')
+    .map((item) => ({ name: item.name.trim(), prompt: item.prompt.trim() }))
+    .filter((item) => item.name && item.prompt);
+
+  return normalized;
 }
 
 function scheduleRefreshModels() {
@@ -93,9 +232,7 @@ async function refreshModels({ force = false, silent = false } = {}) {
 
   try {
     const models =
-      provider === 'anthropic'
-        ? ANTHROPIC_MODELS
-        : await fetchOpenAICompatibleModels(endpoint, apiKey);
+      provider === 'anthropic' ? ANTHROPIC_MODELS : await fetchOpenAICompatibleModels(endpoint, apiKey);
 
     if (thisFetchSeq !== modelFetchSeq) return;
 

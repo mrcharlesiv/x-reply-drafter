@@ -29,6 +29,20 @@
       <label>System prompt</label>
       <textarea id="systemPrompt" rows="5"></textarea>
 
+      <section class="saved-prompts">
+        <div class="saved-prompts-head">
+          <h2>Saved Prompts</h2>
+          <p>Quickly reuse your favorite writing styles.</p>
+        </div>
+
+        <div class="save-prompt-row">
+          <input id="promptName" type="text" placeholder="Prompt name (e.g. Professional)" maxlength="40" />
+          <button id="saveCurrentPrompt" class="secondary" type="button">Save Current Prompt</button>
+        </div>
+
+        <div id="savedPromptsList" class="saved-prompts-list"></div>
+      </section>
+
       <div class="row">
         <div>
           <label>Temperature</label>

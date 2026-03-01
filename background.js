@@ -1,11 +1,29 @@
+const DEFAULT_SAVED_PROMPTS = [
+  {
+    name: 'Witty & Concise',
+    prompt:
+      'You are a witty, knowledgeable person on X. Write a concise, engaging reply. No hashtags. Match the conversational tone. Keep it under 280 characters unless the topic demands more depth.',
+  },
+  {
+    name: 'Professional',
+    prompt:
+      'You are a thoughtful business leader. Write a professional, insightful reply that adds value to the conversation. Be direct and substantive. No hashtags.',
+  },
+  {
+    name: 'Challenger',
+    prompt:
+      'You respectfully challenge the premise of this post with a well-reasoned counterpoint. Be direct but not aggressive. Back up your position with logic. No hashtags.',
+  },
+];
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.openai.com/v1/chat/completions',
   model: 'gpt-4o-mini',
-  systemPrompt:
-    'You are a witty, knowledgeable person on X. Write a concise, engaging reply. No hashtags. Match the conversational tone. Keep it under 280 characters unless the topic demands more depth.',
+  systemPrompt: DEFAULT_SAVED_PROMPTS[0].prompt,
   temperature: 0.8,
   maxTokens: 220,
+  savedPrompts: DEFAULT_SAVED_PROMPTS,
 };
 
 const RATE_LIMIT_MS = 1500;
