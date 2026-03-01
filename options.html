@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>X Reply Drafter Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>X Reply Drafter</h1>
+      <p class="sub">Configure your AI provider and style settings.</p>
+
+      <label>API key</label>
+      <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+
+      <label>API endpoint URL</label>
+      <input id="endpoint" type="url" placeholder="https://api.openai.com/v1/chat/completions" />
+
+      <label>Model name</label>
+      <input id="model" type="text" placeholder="gpt-4o-mini / claude-3-5-sonnet-latest" />
+
+      <label>System prompt</label>
+      <textarea id="systemPrompt" rows="5"></textarea>
+
+      <div class="row">
+        <div>
+          <label>Temperature</label>
+          <input id="temperature" type="number" min="0" max="2" step="0.1" />
+        </div>
+        <div>
+          <label>Max tokens</label>
+          <input id="maxTokens" type="number" min="32" max="1024" step="1" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="reset" class="secondary">Reset defaults</button>
+        <button id="save" class="primary">Save settings</button>
+      </div>
+      <p id="status" class="status"></p>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>
