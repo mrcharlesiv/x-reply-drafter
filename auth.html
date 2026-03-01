@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X Reply Drafter - Login</title>
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>X Reply Drafter</h1>
+      <p class="subtitle">Sign in to get started</p>
+
+      <div id="login-form" class="form-section">
+        <input 
+          type="email" 
+          id="email" 
+          placeholder="Email address" 
+          class="input-field"
+          autocomplete="email"
+        >
+        <input 
+          type="password" 
+          id="password" 
+          placeholder="Password" 
+          class="input-field"
+          autocomplete="current-password"
+        >
+        <button id="login-btn" class="btn btn-primary">Sign In</button>
+        <p class="form-footer">
+          Don't have an account? 
+          <a href="#" onclick="showSignup(); return false;">Sign up</a>
+        </p>
+      </div>
+
+      <div id="signup-form" class="form-section hidden">
+        <input 
+          type="text" 
+          id="name" 
+          placeholder="Full name" 
+          class="input-field"
+          autocomplete="name"
+        >
+        <input 
+          type="email" 
+          id="signup-email" 
+          placeholder="Email address" 
+          class="input-field"
+          autocomplete="email"
+        >
+        <input 
+          type="password" 
+          id="signup-password" 
+          placeholder="Password (min. 8 characters)" 
+          class="input-field"
+          autocomplete="new-password"
+        >
+        <button id="signup-btn" class="btn btn-primary">Create Account</button>
+        <p class="form-footer">
+          Already have an account? 
+          <a href="#" onclick="showLogin(); return false;">Sign in</a>
+        </p>
+      </div>
+
+      <div id="error-message" class="error-message hidden"></div>
+      <div id="success-message" class="success-message hidden"></div>
+
+      <div class="oauth-section">
+        <p>Or continue with:</p>
+        <button id="google-btn" class="btn btn-oauth">Google</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>

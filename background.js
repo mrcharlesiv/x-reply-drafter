@@ -68,11 +68,20 @@ async function handleGenerate(payload) {
   if (waitMs) await delay(waitMs);
   lastRequestTs = Date.now();
 
+  // Check if user is logged in (has auth token)
+  const localStorage = await chrome.storage.local.get(['authToken', 'isLoggedIn']);
+  
+  if (localStorage.isLoggedIn && localStorage.authToken) {
+    // Use authenticated API proxy
+    return await callAuthenticatedAPI(localStorage.authToken, payload);
+  }
+
+  // Fall back to local API key method
   const settingsRaw = await chrome.storage.sync.get(Object.keys(DEFAULT_SETTINGS));
   const settings = { ...DEFAULT_SETTINGS, ...settingsRaw };
 
   if (!settings.apiKey?.trim()) {
-    throw new Error('Missing API key. Open extension settings and add your API key.');
+    throw new Error('Missing API key or login. Log in at the extension settings or add your API key.');
   }
 
   const endpoint = (settings.endpoint || '').trim();
@@ -87,6 +96,48 @@ async function handleGenerate(payload) {
     draft: generated.trim(),
     provider,
   };
+}
+
+async function callAuthenticatedAPI(authToken, payload) {
+  const apiUrl = 'https://x-reply-drafter.com'; // Update to your domain
+  
+  try {
+    const res = await fetch(`${apiUrl}/api/drafts/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        tweetText: payload.text,
+        persona: payload.persona || 'professional',
+        model: 'claude',
+      }),
+    });
+
+    const data = await safeJson(res);
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        throw new Error(data?.error || 'Daily limit reached. Upgrade to Pro for unlimited.');
+      }
+      throw new Error(data?.error || `API error (${res.status})`);
+    }
+
+    // Return first draft, or all if needed
+    const draft = data.drafts?.[0] || '';
+    if (!draft) throw new Error('No drafts generated');
+
+    return {
+      draft: draft.trim(),
+      provider: 'x-reply-drafter-api',
+      drafts: data.drafts,
+      usage: data.usage,
+      limit: data.limit,
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
 function detectProvider(endpoint, model = '') {

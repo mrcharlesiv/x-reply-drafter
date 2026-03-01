@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X Reply Drafter",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AI-powered reply drafter for X (Twitter). Generate contextual, engaging replies with one click.",
   "permissions": [
     "storage",
@@ -10,6 +10,8 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
+    "https://x-reply-drafter.com/*",
+    "https://localhost:3000/*",
     "https://api.anthropic.com/*",
     "https://api.openai.com/*",
     "https://*.anthropic.com/*",
