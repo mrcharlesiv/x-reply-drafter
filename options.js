@@ -9,10 +9,9 @@ const DEFAULT_SETTINGS = {
 };
 
 const ANTHROPIC_MODELS = [
-  'claude-opus-4-0520',
-  'claude-sonnet-4-20250514',
-  'claude-haiku-235-20241022',
-  'claude-3-5-haiku-20241022',
+  'claude-opus-4-6',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-6',
 ];
 
 const MODEL_FETCH_DEBOUNCE_MS = 1000;
