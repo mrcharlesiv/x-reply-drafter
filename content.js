@@ -61,12 +61,17 @@ async function draftIntoReplyBox(tweetEl, button) {
     const draft = await requestDraft(context);
     if (!draft) throw new Error('No draft returned');
 
-    let editor = findOpenReplyEditor(tweetEl);
-    if (!editor) {
-      const replyButton = findReplyButton(tweetEl);
-      if (!replyButton) throw new Error('Reply button not found');
+    // Always click reply first on the feed to open the reply composer for THIS tweet
+    const replyButton = findReplyButton(tweetEl);
+    if (replyButton) {
+      // Snapshot existing editors before clicking reply
+      const existingEditors = new Set(document.querySelectorAll('div[role="textbox"][data-testid="tweetTextarea_0"]'));
       replyButton.click();
-      editor = await waitForReplyEditor(6000);
+      // Wait for a NEW editor that wasn't there before
+      const editor_result = await waitForNewReplyEditor(existingEditors, 6000);
+      var editor = editor_result;
+    } else {
+      var editor = findOpenReplyEditor(tweetEl);
     }
 
     if (!editor) throw new Error('Reply editor did not appear');
@@ -119,6 +124,37 @@ function findOpenReplyEditor(tweetEl) {
   }
 
   return null;
+}
+
+function waitForNewReplyEditor(existingEditors, timeoutMs = 6000) {
+  return new Promise((resolve) => {
+    function findNew() {
+      const all = document.querySelectorAll('div[role="textbox"][data-testid="tweetTextarea_0"]');
+      for (const el of all) {
+        if (!existingEditors.has(el) && isVisible(el)) return el;
+      }
+      return null;
+    }
+
+    const first = findNew();
+    if (first) return resolve(first);
+
+    const obs = new MutationObserver(() => {
+      const found = findNew();
+      if (found) {
+        obs.disconnect();
+        clearTimeout(timer);
+        resolve(found);
+      }
+    });
+
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    const timer = setTimeout(() => {
+      obs.disconnect();
+      resolve(null);
+    }, timeoutMs);
+  });
 }
 
 function waitForReplyEditor(timeoutMs = 6000) {
