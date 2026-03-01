@@ -51,21 +51,25 @@ document.getElementById('login-btn').addEventListener('click', async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      showError(data.error || 'Login failed');
+      showError(data.error || 'Login failed. Check your email and password.');
       return;
     }
 
     // Store token and user info
     await chrome.storage.local.set({
-      authToken: data.token,
+      authToken: data.token || data.session?.access_token,
       userId: data.user.id,
       userEmail: data.user.email,
       userPlan: data.user.plan,
+      userName: data.user.name,
       isLoggedIn: true,
+      lastLogin: new Date().toISOString(),
     });
 
     showSuccess('Login successful! Redirecting...');
     setTimeout(() => {
+      // Open dashboard in new tab
+      chrome.tabs.create({ url: `${API_URL}/dashboard` });
       window.close();
     }, 1000);
   } catch (error) {
@@ -120,15 +124,19 @@ document.getElementById('signup-btn').addEventListener('click', async () => {
 
     // Store token and user info
     await chrome.storage.local.set({
-      authToken: loginData.token,
+      authToken: loginData.token || loginData.session?.access_token,
       userId: loginData.user.id,
       userEmail: loginData.user.email,
       userPlan: loginData.user.plan || 'free',
+      userName: loginData.user.name || name,
       isLoggedIn: true,
+      lastLogin: new Date().toISOString(),
     });
 
-    showSuccess('Account created! Redirecting...');
+    showSuccess('Account created! Redirecting to dashboard...');
     setTimeout(() => {
+      // Open dashboard in new tab
+      chrome.tabs.create({ url: `${API_URL}/dashboard` });
       window.close();
     }, 1000);
   } catch (error) {
