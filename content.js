@@ -1,16 +1,173 @@
 const BUTTON_CLASS = 'xrd-draft-btn';
 const PROCESSED_ATTR = 'data-xrd-processed';
 const OVERLAY_ID = 'xrd-overlay-root';
+const INLINE_PROMPT_ID = 'xrd-inline-prompt';
 
 let currentContext = null;
 let generating = false;
+let pendingReplyContext = null;
+let activeInlineEditor = null;
 
 boot();
 
 function boot() {
   injectButtons();
-  const observer = new MutationObserver(debounce(injectButtons, 300));
+  attachNativeReplyListener();
+
+  const observer = new MutationObserver(
+    debounce(() => {
+      injectButtons();
+      maybeAttachInlinePrompt();
+    }, 250)
+  );
+
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function attachNativeReplyListener() {
+  document.addEventListener(
+    'click',
+    (event) => {
+      const replyTrigger = event.target.closest('button[data-testid="reply"], [data-testid="reply"]');
+      if (!replyTrigger) return;
+
+      const tweet = replyTrigger.closest('article[data-testid="tweet"]');
+      if (!tweet) return;
+
+      pendingReplyContext = extractTweetContext(tweet);
+    },
+    true
+  );
+}
+
+function maybeAttachInlinePrompt() {
+  const editor = document.querySelector('div[role="dialog"] div[role="textbox"][data-testid="tweetTextarea_0"]');
+  if (!editor) {
+    removeInlinePrompt();
+    activeInlineEditor = null;
+    return;
+  }
+
+  if (activeInlineEditor !== editor) {
+    removeInlinePrompt();
+    activeInlineEditor = editor;
+    attachEditorTypingListener(editor);
+  }
+
+  if (document.getElementById(INLINE_PROMPT_ID)) return;
+
+  const context = resolveComposerContext(editor);
+  if (!context?.text) return;
+
+  renderInlinePrompt(editor, context);
+}
+
+function attachEditorTypingListener(editor) {
+  editor.addEventListener(
+    'input',
+    () => {
+      const text = (editor.innerText || editor.textContent || '').trim();
+      if (text.length > 0) removeInlinePrompt();
+    },
+    { passive: true }
+  );
+}
+
+function renderInlinePrompt(editor, context) {
+  const anchor = editor.closest('div[role="dialog"]') || editor.parentElement;
+  if (!anchor) return;
+
+  if (getComputedStyle(anchor).position === 'static') {
+    anchor.style.position = 'relative';
+  }
+
+  const prompt = document.createElement('div');
+  prompt.id = INLINE_PROMPT_ID;
+  prompt.className = 'xrd-inline-prompt';
+  prompt.innerHTML = `
+    <span class="xrd-inline-text">Draft a reply with AI?</span>
+    <button type="button" class="xrd-inline-btn">✍️ Draft with AI</button>
+    <span class="xrd-inline-status" aria-live="polite"></span>
+  `;
+
+  const btn = prompt.querySelector('.xrd-inline-btn');
+  const statusEl = prompt.querySelector('.xrd-inline-status');
+
+  btn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (generating) return;
+    generating = true;
+    btn.disabled = true;
+    statusEl.textContent = 'Generating…';
+
+    try {
+      const draft = await requestDraft(context);
+      if (!draft) throw new Error('No draft returned');
+      applyDraftToEditor(editor, draft);
+      statusEl.textContent = 'Inserted';
+      setTimeout(() => removeInlinePrompt(), 350);
+    } catch (err) {
+      statusEl.textContent = err?.message || 'Failed';
+      btn.disabled = false;
+    } finally {
+      generating = false;
+    }
+  });
+
+  anchor.appendChild(prompt);
+}
+
+function removeInlinePrompt() {
+  const prompt = document.getElementById(INLINE_PROMPT_ID);
+  if (prompt) prompt.remove();
+}
+
+function resolveComposerContext(editor) {
+  if (pendingReplyContext?.text) return pendingReplyContext;
+
+  const dialog = editor.closest('div[role="dialog"]');
+  if (!dialog) return null;
+
+  const author =
+    dialog
+      .querySelector('div[data-testid="User-Name"] a[role="link"]')
+      ?.getAttribute('href')
+      ?.replace('/', '') ||
+    dialog.querySelector('div[data-testid="User-Name"] span')?.textContent ||
+    'unknown';
+
+  const tweetText = dialog.querySelector('div[data-testid="tweetText"]')?.innerText?.trim() || '';
+
+  if (!tweetText) return null;
+
+  return {
+    author: normalizeHandle(author),
+    text: tweetText,
+    quoteText: '',
+    element: null,
+  };
+}
+
+function applyDraftToEditor(editor, draft) {
+  editor.focus();
+  editor.textContent = draft;
+  editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: draft }));
+}
+
+async function requestDraft(context) {
+  const res = await chrome.runtime.sendMessage({
+    type: 'x-reply-drafter:generate',
+    payload: {
+      author: context.author,
+      text: context.text,
+      quoteText: context.quoteText,
+    },
+  });
+
+  if (!res?.ok) throw new Error(res?.error || 'Failed to generate draft');
+  return res.draft || '';
 }
 
 function injectButtons() {
@@ -54,8 +211,7 @@ function extractTweetContext(tweetEl) {
     tweetEl.querySelector('div[data-testid="User-Name"] span')?.textContent ||
     'unknown';
 
-  const mainText =
-    tweetEl.querySelector('div[data-testid="tweetText"]')?.innerText?.trim() || '';
+  const mainText = tweetEl.querySelector('div[data-testid="tweetText"]')?.innerText?.trim() || '';
 
   const quoteCandidates = tweetEl.querySelectorAll('div[data-testid="tweetText"]');
   const quoteText = quoteCandidates.length > 1 ? quoteCandidates[1].innerText.trim() : '';
@@ -140,19 +296,9 @@ async function generateDraft(root) {
   toggleControls(root, true);
 
   try {
-    const res = await chrome.runtime.sendMessage({
-      type: 'x-reply-drafter:generate',
-      payload: {
-        author: currentContext.author,
-        text: currentContext.text,
-        quoteText: currentContext.quoteText,
-      },
-    });
-
-    if (!res?.ok) throw new Error(res?.error || 'Failed to generate draft');
-
+    const draft = await requestDraft(currentContext);
     const textarea = root.querySelector('#xrd-draft-text');
-    textarea.value = res.draft || '';
+    textarea.value = draft;
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     setStatus(root, `Draft ready • ${textarea.value.length} chars`);
@@ -185,6 +331,7 @@ async function insertDraft(root) {
   const replyButton = targetTweet.querySelector('button[data-testid="reply"]');
   if (!replyButton) return setStatus(root, 'Reply button not found');
 
+  pendingReplyContext = currentContext;
   replyButton.click();
 
   const editor = await waitForElement('div[role="dialog"] div[role="textbox"][data-testid="tweetTextarea_0"]', 5000);
@@ -193,9 +340,7 @@ async function insertDraft(root) {
     return;
   }
 
-  editor.focus();
-  editor.textContent = draft;
-  editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: draft }));
+  applyDraftToEditor(editor, draft);
   setStatus(root, 'Inserted into reply box');
 }
 

@@ -4,10 +4,12 @@ AI-assisted reply drafting for X (twitter.com / x.com).
 
 ## Features
 - Injects **Draft Reply** button on each post
+- Also detects X's native reply flow and shows subtle inline **✍️ Draft with AI** prompt in the composer
 - Reads author + post text (+ quote tweet text when present)
 - Calls configurable AI endpoint (OpenAI, Anthropic, OpenAI-compatible)
 - Modern dark overlay for draft generation/editing
 - One-click **Copy** and **Insert into reply box**
+- Inline prompt auto-hides when user starts typing manually
 - Settings page for API key, endpoint, model, and system prompt
 - Manifest V3, mutation-observer based injection for X's dynamic timeline
 
