@@ -193,10 +193,27 @@ function extractTweetContext(tweetEl) {
     tweetEl.querySelector('div[data-testid="User-Name"] span')?.textContent ||
     'unknown';
 
-  const mainText = tweetEl.querySelector('div[data-testid="tweetText"]')?.innerText?.trim() || '';
+  // Try multiple selectors for tweet text
+  let mainText = '';
+  const tweetTextEl = tweetEl.querySelector('[data-testid="tweetText"]');
+  if (tweetTextEl) {
+    mainText = tweetTextEl.innerText?.trim() || tweetTextEl.textContent?.trim() || '';
+  }
+  // Fallback: grab text from the tweet's main content area
+  if (!mainText) {
+    const langDiv = tweetEl.querySelector('div[lang]');
+    if (langDiv) {
+      mainText = langDiv.innerText?.trim() || langDiv.textContent?.trim() || '';
+    }
+  }
 
-  const quoteCandidates = tweetEl.querySelectorAll('div[data-testid="tweetText"]');
-  const quoteText = quoteCandidates.length > 1 ? quoteCandidates[1].innerText.trim() : '';
+  const quoteCandidates = tweetEl.querySelectorAll('[data-testid="tweetText"]');
+  let quoteText = '';
+  if (quoteCandidates.length > 1) {
+    quoteText = quoteCandidates[1].innerText?.trim() || quoteCandidates[1].textContent?.trim() || '';
+  }
+
+  console.log('[XRD] Extracted tweet context:', { author, mainText, quoteText });
 
   return {
     author: normalizeHandle(author),
