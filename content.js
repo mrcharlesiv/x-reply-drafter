@@ -148,26 +148,37 @@ function applyDraftToEditor(editor, draft) {
   const text = String(draft || '');
   editor.focus();
 
-  const selection = window.getSelection();
-  if (selection && editor.contains(selection.anchorNode)) {
-    selection.removeAllRanges();
-  }
+  // Clear existing content first
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  sel.removeAllRanges();
+  sel.addRange(range);
 
+  // Try execCommand insertText (works best with React/contenteditable)
   let inserted = false;
   try {
-    inserted = document.execCommand('selectAll', false, null);
-    document.execCommand('insertText', false, text);
+    inserted = document.execCommand('insertText', false, text);
   } catch {
     inserted = false;
   }
 
-  if (!inserted) {
-    editor.textContent = text;
+  // Fallback: manually set content via spans (mimics X's internal structure)
+  if (!inserted || !editor.textContent?.trim()) {
+    // X uses spans inside the contenteditable
+    editor.innerHTML = '';
+    const span = document.createElement('span');
+    span.setAttribute('data-text', 'true');
+    span.textContent = text;
+    editor.appendChild(span);
   }
 
+  // Fire events so React picks up the change
   editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
   editor.dispatchEvent(new Event('change', { bubbles: true }));
-  editor.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ', code: 'Space' }));
+  editor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: text }));
+
+  console.log('[XRD] Draft inserted into editor:', text.substring(0, 50) + '...');
 }
 
 async function requestDraft(context) {
