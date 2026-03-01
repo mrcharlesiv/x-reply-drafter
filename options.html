@@ -17,8 +17,14 @@
       <label>API endpoint URL</label>
       <input id="endpoint" type="url" placeholder="https://api.openai.com/v1/chat/completions" />
 
-      <label>Model name</label>
-      <input id="model" type="text" placeholder="gpt-4o-mini / claude-3-5-sonnet-latest" />
+      <label>Model</label>
+      <div class="model-control">
+        <select id="modelSelect" hidden></select>
+        <input id="model" type="text" placeholder="gpt-4o-mini / claude-3-5-sonnet-latest" />
+        <button id="refreshModels" class="secondary" type="button">Refresh Models</button>
+        <span id="modelsLoading" class="spinner" hidden aria-label="Loading models"></span>
+      </div>
+      <p id="modelHelp" class="hint">Enter API key + endpoint, then refresh to load models.</p>
 
       <label>System prompt</label>
       <textarea id="systemPrompt" rows="5"></textarea>

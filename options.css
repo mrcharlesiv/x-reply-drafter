@@ -25,7 +25,7 @@ label {
   color: #aebac5;
   font-size: 13px;
 }
-input, textarea {
+input, textarea, select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid rgba(140, 160, 180, 0.26);
@@ -36,9 +36,35 @@ input, textarea {
   font-size: 14px;
   outline: none;
 }
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
   border-color: #1d9bf0;
   box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+.model-control {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.model-control button {
+  white-space: nowrap;
+}
+.hint {
+  margin: 6px 0 0;
+  color: #8b98a5;
+  font-size: 12px;
+  min-height: 16px;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(140, 160, 180, 0.35);
+  border-top-color: #1d9bf0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }

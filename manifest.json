@@ -12,7 +12,8 @@
     "https://twitter.com/*",
     "https://api.anthropic.com/*",
     "https://api.openai.com/*",
-    "https://*.anthropic.com/*"
+    "https://*.anthropic.com/*",
+    "https://*/*"
   ],
   "content_scripts": [
     {
