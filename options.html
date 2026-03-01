@@ -26,6 +26,20 @@
       </div>
       <p id="modelHelp" class="hint">Enter API key + endpoint, then refresh to load models.</p>
 
+      <section class="saved-prompts saved-api-configs">
+        <div class="saved-prompts-head">
+          <h2>Saved API Keys</h2>
+          <p>Save and switch between provider API configs quickly.</p>
+        </div>
+
+        <div class="save-prompt-row">
+          <input id="apiConfigName" type="text" placeholder="Provider name (e.g. Anthropic)" maxlength="40" />
+          <button id="saveCurrentApiConfig" class="secondary" type="button">Save Current API Config</button>
+        </div>
+
+        <div id="savedApiConfigsList" class="saved-prompts-list"></div>
+      </section>
+
       <label>System prompt</label>
       <textarea id="systemPrompt" rows="5"></textarea>
 

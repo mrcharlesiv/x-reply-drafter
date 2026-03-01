@@ -16,6 +16,15 @@ const DEFAULT_SAVED_PROMPTS = [
   },
 ];
 
+const DEFAULT_SAVED_API_CONFIGS = [
+  {
+    name: 'Anthropic',
+    apiKey: '',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-opus-4-6',
+  },
+];
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.openai.com/v1/chat/completions',
@@ -24,6 +33,7 @@ const DEFAULT_SETTINGS = {
   temperature: 0.8,
   maxTokens: 220,
   savedPrompts: DEFAULT_SAVED_PROMPTS,
+  savedApiConfigs: DEFAULT_SAVED_API_CONFIGS,
 };
 
 const RATE_LIMIT_MS = 1500;

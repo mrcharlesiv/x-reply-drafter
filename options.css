@@ -118,6 +118,17 @@ input:focus, textarea:focus, select:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.prompt-pill .meta {
+  color: #9ec2de;
+  font-size: 11px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-api-configs {
+  margin-bottom: 12px;
+}
 .prompt-delete {
   border: 0;
   border-radius: 999px;

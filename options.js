@@ -75,6 +75,15 @@ RULES:
   },
 ];
 
+const DEFAULT_SAVED_API_CONFIGS = [
+  {
+    name: 'Anthropic',
+    apiKey: '',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-opus-4-6',
+  },
+];
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
   endpoint: 'https://api.openai.com/v1/chat/completions',
@@ -83,6 +92,7 @@ const DEFAULT_SETTINGS = {
   temperature: 0.8,
   maxTokens: 220,
   savedPrompts: DEFAULT_SAVED_PROMPTS,
+  savedApiConfigs: DEFAULT_SAVED_API_CONFIGS,
 };
 
 const ANTHROPIC_MODELS = ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-6'];
@@ -94,6 +104,7 @@ const $ = (id) => document.getElementById(id);
 let modelFetchTimer = null;
 let modelFetchSeq = 0;
 let savedPromptsState = [];
+let savedApiConfigsState = [];
 
 init();
 
@@ -109,7 +120,9 @@ async function init() {
   $('maxTokens').value = merged.maxTokens;
 
   savedPromptsState = normalizeSavedPrompts(merged.savedPrompts);
+  savedApiConfigsState = normalizeSavedApiConfigs(merged.savedApiConfigs);
   renderSavedPrompts();
+  renderSavedApiConfigs();
 
   $('save').addEventListener('click', save);
   $('reset').addEventListener('click', reset);
@@ -117,6 +130,10 @@ async function init() {
   $('saveCurrentPrompt').addEventListener('click', saveCurrentPrompt);
   $('savedPromptsList').addEventListener('click', onSavedPromptAction);
   $('savedPromptsList').addEventListener('keydown', onSavedPromptKeydown);
+
+  $('saveCurrentApiConfig').addEventListener('click', saveCurrentApiConfig);
+  $('savedApiConfigsList').addEventListener('click', onSavedApiConfigAction);
+  $('savedApiConfigsList').addEventListener('keydown', onSavedApiConfigKeydown);
 
   $('refreshModels').addEventListener('click', () => refreshModels({ force: true }));
   $('apiKey').addEventListener('input', scheduleRefreshModels);
@@ -135,6 +152,7 @@ async function save() {
     temperature: clamp(Number($('temperature').value), 0, 2, DEFAULT_SETTINGS.temperature),
     maxTokens: clamp(Number($('maxTokens').value), 32, 1024, DEFAULT_SETTINGS.maxTokens),
     savedPrompts: savedPromptsState,
+    savedApiConfigs: savedApiConfigsState,
   };
 
   await chrome.storage.sync.set(payload);
@@ -148,8 +166,11 @@ async function reset() {
   });
 
   savedPromptsState = normalizeSavedPrompts(DEFAULT_SETTINGS.savedPrompts);
+  savedApiConfigsState = normalizeSavedApiConfigs(DEFAULT_SETTINGS.savedApiConfigs);
   $('promptName').value = '';
+  $('apiConfigName').value = '';
   renderSavedPrompts();
+  renderSavedApiConfigs();
 
   showManualModelInput();
   $('modelHelp').textContent = 'Defaults restored. Refresh to load models from your provider.';
@@ -220,6 +241,120 @@ function loadSavedPromptByName(name) {
   setStatus(`Loaded "${picked.name}".`);
 }
 
+async function saveCurrentApiConfig() {
+  const name = $('apiConfigName').value.trim();
+  const apiKey = $('apiKey').value.trim();
+  const endpoint = $('endpoint').value.trim();
+  const model = getCurrentModelValue();
+
+  if (!name) {
+    setStatus('Add a provider name first.');
+    return;
+  }
+
+  if (!endpoint || !model) {
+    setStatus('Endpoint and model are required to save an API config.');
+    return;
+  }
+
+  const existingIdx = savedApiConfigsState.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
+  const next = [...savedApiConfigsState];
+  const config = { name, apiKey, endpoint, model };
+
+  if (existingIdx >= 0) {
+    next[existingIdx] = config;
+  } else {
+    next.push(config);
+  }
+
+  savedApiConfigsState = next;
+  $('apiConfigName').value = '';
+  renderSavedApiConfigs();
+  await chrome.storage.sync.set({ savedApiConfigs: savedApiConfigsState });
+  setStatus(existingIdx >= 0 ? `Updated API config "${name}".` : `Saved API config "${name}".`);
+}
+
+async function onSavedApiConfigAction(event) {
+  const deleteBtn = event.target.closest('.prompt-delete');
+  if (deleteBtn) {
+    event.stopPropagation();
+    const name = deleteBtn.dataset.name;
+    savedApiConfigsState = savedApiConfigsState.filter((item) => item.name !== name);
+    renderSavedApiConfigs();
+    await chrome.storage.sync.set({ savedApiConfigs: savedApiConfigsState });
+    setStatus(`Deleted API config "${name}".`);
+    return;
+  }
+
+  const pill = event.target.closest('.prompt-pill');
+  if (!pill) return;
+  loadSavedApiConfigByName(pill.dataset.name);
+}
+
+function onSavedApiConfigKeydown(event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const pill = event.target.closest('.prompt-pill');
+  if (!pill) return;
+  event.preventDefault();
+  loadSavedApiConfigByName(pill.dataset.name);
+}
+
+function loadSavedApiConfigByName(name) {
+  const picked = savedApiConfigsState.find((item) => item.name === name);
+  if (!picked) return;
+
+  $('apiKey').value = picked.apiKey || '';
+  $('endpoint').value = picked.endpoint || '';
+  $('model').value = picked.model || '';
+  $('apiConfigName').value = picked.name;
+
+  showManualModelInput();
+  refreshModels({ silent: true });
+  setStatus(`Loaded API config "${picked.name}".`);
+}
+
+function renderSavedApiConfigs() {
+  const list = $('savedApiConfigsList');
+  list.innerHTML = '';
+
+  if (!savedApiConfigsState.length) {
+    const empty = document.createElement('p');
+    empty.className = 'saved-prompts-empty';
+    empty.textContent = 'No saved API configs yet. Save one to switch providers quickly.';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const item of savedApiConfigsState) {
+    const pill = document.createElement('div');
+    pill.className = 'prompt-pill';
+    pill.dataset.name = item.name;
+    pill.title = `${item.name} · ${item.endpoint} · ${item.model}`;
+    pill.setAttribute('role', 'button');
+    pill.setAttribute('tabindex', '0');
+
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = item.name;
+
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = `${maskApiKey(item.apiKey)} · ${item.model}`;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'prompt-delete';
+    remove.dataset.name = item.name;
+    remove.setAttribute('aria-label', `Delete API config ${item.name}`);
+    remove.textContent = '×';
+
+    pill.appendChild(name);
+    pill.appendChild(meta);
+    pill.appendChild(remove);
+    list.appendChild(pill);
+  }
+}
+
 function renderSavedPrompts() {
   const list = $('savedPromptsList');
   list.innerHTML = '';
@@ -266,6 +401,35 @@ function normalizeSavedPrompts(value) {
     .filter((item) => item.name && item.prompt);
 
   return normalized;
+}
+
+function normalizeSavedApiConfigs(value) {
+  if (!Array.isArray(value)) return [...DEFAULT_SAVED_API_CONFIGS];
+
+  const normalized = value
+    .filter(
+      (item) =>
+        item &&
+        typeof item.name === 'string' &&
+        typeof item.apiKey === 'string' &&
+        typeof item.endpoint === 'string' &&
+        typeof item.model === 'string'
+    )
+    .map((item) => ({
+      name: item.name.trim(),
+      apiKey: item.apiKey.trim(),
+      endpoint: item.endpoint.trim(),
+      model: item.model.trim(),
+    }))
+    .filter((item) => item.name && item.endpoint && item.model);
+
+  return normalized;
+}
+
+function maskApiKey(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '****';
+  return `****${trimmed.slice(-4)}`;
 }
 
 function scheduleRefreshModels() {
