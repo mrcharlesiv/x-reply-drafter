@@ -1,79 +1,59 @@
-import { generateDraftDirect, getStoredLLMConfig } from '../lib/api';
-import { getLocalPrompts, getSettings, addLocalPost } from '../lib/storage';
-const ATTR = 'data-xrd';
-function extract(el: Element) {
-  const txt = el.querySelector('[data-testid="tweetText"]')?.textContent?.trim();
-  if (!txt) return null;
-  const href = el.querySelector('a[role="link"]')?.getAttribute('href') || '';
-  const author = href.split('/').filter(Boolean)[0] || '';
-  const statusHref = el.querySelector('a[href*="/status/"] time')?.parentElement?.getAttribute('href') || '';
-  const tweetId = statusHref.split('/status/')[1]?.split(/[/?]/)[0] || '';
-  return { content: txt, author, tweetId };
+const BC = 'xrd-draft-btn', DC = 'xrd-drafting';
+function extract(a) {
+  const te = a.querySelector('[data-testid="tweetText"]'); const text = te?.textContent?.trim() || ''; if (!text) return null;
+  let author = ''; const un = a.querySelector('[data-testid="User-Name"]');
+  if (un) { const h = un.querySelector('a[tabindex="-1"]') || un.querySelectorAll('a')[1]; if (h) { const p = h.pathname; if (p) author = p.slice(1); } }
+  let postId = ''; const tl = a.querySelector('a[href*="/status/"] time')?.parentElement;
+  if (tl?.href) { const m = tl.href.match(/\/status\/(\d+)/); if (m) postId = m[1]; }
+  return { text, author, postId };
 }
-async function showPanel(article: Element) {
-  const post = extract(article); if (!post) return;
-  const old = article.querySelector('.xrd-panel'); if (old) { old.remove(); return; }
-  const settings = await getSettings();
-  const prompts = (await getLocalPrompts()).sort((a, b) => b.avgEngagement - a.avgEngagement);
-  const config = await getStoredLLMConfig();
-  const panel = document.createElement('div'); panel.className = 'xrd-panel';
-  panel.innerHTML = `<div class="xrd-panel-header"><span class="xrd-panel-title">✍️ Draft Reply</span><button class="xrd-close">✕</button></div>
-<div class="xrd-body">
-  ${!config ? '<div class="xrd-warn">⚠️ No API key. Click extension icon.</div>' : ''}
-  <div class="xrd-field"><label>Tone</label><div class="xrd-tones">
-    ${['casual','professional','provocative','contrarian'].map(t => `<button class="xrd-tone ${t===settings.defaultTone?'active':''}" data-t="${t}">${{casual:'😎',professional:'👔',provocative:'🔥',contrarian:'🤔'}[t]} ${t}</button>`).join('')}
-  </div></div>
-  <div class="xrd-field"><label>Prompt</label><select class="xrd-sel" id="xrd-ps"><option value="">Default</option>${prompts.map(p=>`<option value="${p.id}" data-txt="${encodeURIComponent(p.text)}">${p.text.slice(0,60)}</option>`).join('')}</select></div>
-  <button class="xrd-gen" id="xrd-gen">✨ Generate</button>
-  <div class="xrd-result" id="xrd-res" style="display:none"><textarea class="xrd-textarea" id="xrd-txt" rows="3"></textarea><div class="xrd-acts"><button class="xrd-btn2" id="xrd-regen">🔄 Redo</button><button class="xrd-btn1" id="xrd-use">📋 Use</button></div></div>
-  <div class="xrd-loading" id="xrd-load" style="display:none"><div class="xrd-spin"></div>Generating...</div>
-  <div class="xrd-err" id="xrd-err" style="display:none"></div>
-</div>`;
-  const bar = article.querySelector('[role="group"]');
-  if (bar) bar.parentElement?.insertBefore(panel, bar.nextSibling); else article.appendChild(panel);
-  let tone = settings.defaultTone, promptId = settings.defaultPromptId || '';
-  panel.querySelector('.xrd-close')?.addEventListener('click', () => panel.remove());
-  panel.querySelectorAll('.xrd-tone').forEach(b => b.addEventListener('click', () => { panel.querySelectorAll('.xrd-tone').forEach(x => x.classList.remove('active')); b.classList.add('active'); tone = (b as HTMLElement).dataset.t || 'casual'; }));
-  const sel = panel.querySelector('#xrd-ps') as HTMLSelectElement;
-  sel?.addEventListener('change', () => { promptId = sel.value; });
-  async function gen() {
-    const load = panel.querySelector('#xrd-load') as HTMLElement, res = panel.querySelector('#xrd-res') as HTMLElement;
-    const txt = panel.querySelector('#xrd-txt') as HTMLTextAreaElement, err = panel.querySelector('#xrd-err') as HTMLElement;
-    const btn = panel.querySelector('#xrd-gen') as HTMLButtonElement;
-    load.style.display = 'flex'; res.style.display = 'none'; err.style.display = 'none'; btn.disabled = true;
-    let pt = 'Write a natural, engaging reply.';
-    if (promptId) { const o = sel?.selectedOptions[0]; if (o?.dataset.txt) pt = decodeURIComponent(o.dataset.txt); }
-    try { txt.value = await generateDraftDirect(post.content, post.author, pt, tone); res.style.display = 'block'; }
-    catch (e: any) { err.textContent = e.message; err.style.display = 'block'; }
-    load.style.display = 'none'; btn.disabled = false;
-  }
-  panel.querySelector('#xrd-gen')?.addEventListener('click', gen);
-  panel.querySelector('#xrd-regen')?.addEventListener('click', gen);
-  panel.querySelector('#xrd-use')?.addEventListener('click', async () => {
-    const text = (panel.querySelector('#xrd-txt') as HTMLTextAreaElement)?.value; if (!text) return;
-    const reply = article.querySelector('[data-testid="reply"]') as HTMLElement;
-    if (reply) { reply.click(); await new Promise(r => setTimeout(r, 500));
-      const box = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement;
-      if (box) { box.focus(); document.execCommand('insertText', false, text);
-        try { await addLocalPost({ tweetId: post.tweetId, replyTweetId: '', originalAuthor: post.author, originalContent: post.content, replyContent: text, promptId, tone, likes: 0, retweets: 0, replies: 0, impressions: 0, postedAt: new Date().toISOString(), lastTrackedAt: new Date().toISOString() }); } catch {}
-        if (settings.autoSubmit) { await new Promise(r => setTimeout(r, 300)); (document.querySelector('[data-testid="tweetButtonInline"]') as HTMLElement)?.click(); }
+function mkBtn() {
+  const b = document.createElement('button'); b.className = BC;
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Draft</span>';
+  b.title = 'Draft AI Reply'; return b;
+}
+function inject(a) {
+  if (a.querySelector('.' + BC)) return;
+  const bar = a.querySelector('[role="group"]'); if (!bar) return;
+  const b = mkBtn();
+  b.addEventListener('click', async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (b.classList.contains(DC)) return; b.classList.add(DC);
+    const sp = b.querySelector('span'); sp.textContent = '...';
+    try {
+      const pd = extract(a);
+      if (!pd) { sp.textContent = 'Error'; setTimeout(() => { sp.textContent = 'Draft'; b.classList.remove(DC); }, 2000); return; }
+      const r = await chrome.runtime.sendMessage({ type: 'DRAFT_REPLY', payload: pd });
+      if (r?.error) { sp.textContent = 'Err'; setTimeout(() => { sp.textContent = 'Draft'; b.classList.remove(DC); }, 2000); return; }
+      const rb = a.querySelector('[data-testid="reply"]');
+      if (rb) {
+        rb.click(); await new Promise(r => setTimeout(r, 500));
+        const cb = document.querySelector('[data-testid="tweetTextarea_0"]');
+        if (cb) {
+          cb.focus(); document.execCommand('insertText', false, r.draft);
+          cb.dispatchEvent(new Event('input', { bubbles: true }));
+          chrome.runtime.sendMessage({ type: 'SAVE_POST', payload: { postId: pd.postId, postAuthor: pd.author, postText: pd.text.slice(0, 500), replyText: r.draft, promptId: r.promptId || '', tone: r.tone || 'casual' } });
+          chrome.storage.local.get({ autoSubmit: false }, d => {
+            if (d.autoSubmit) setTimeout(() => { const sb = document.querySelector('[data-testid="tweetButton"],[data-testid="tweetButtonInline"]'); if (sb) sb.click(); }, 300);
+          });
+        }
       }
-    }
-    panel.remove();
+      sp.textContent = 'Done'; setTimeout(() => { sp.textContent = 'Draft'; b.classList.remove(DC); }, 2000);
+    } catch (err) { sp.textContent = 'Err'; setTimeout(() => { sp.textContent = 'Draft'; b.classList.remove(DC); }, 2000); }
   });
+  bar.appendChild(b);
 }
-function process() {
+function scan() { document.querySelectorAll('article[data-testid="tweet"]').forEach(a => inject(a)); }
+const obs = new MutationObserver(ms => { for (const m of ms) if (m.addedNodes.length) { requestAnimationFrame(scan); break; } });
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { scan(); obs.observe(document.body, { childList: true, subtree: true }); });
+else { scan(); obs.observe(document.body, { childList: true, subtree: true }); }
+setInterval(() => {
   document.querySelectorAll('article[data-testid="tweet"]').forEach(a => {
-    if (a.hasAttribute(ATTR)) return; a.setAttribute(ATTR, '1');
-    const g = a.querySelector('[role="group"]'); if (!g) return;
-    const c = document.createElement('div'); c.className = 'xrd-btn-wrap';
-    const b = document.createElement('button'); b.className = 'xrd-draft-btn'; b.innerHTML = '✍️'; b.title = 'Draft AI Reply';
-    b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); showPanel(a); });
-    c.appendChild(b); g.appendChild(c);
+    const pd = extract(a); if (!pd?.postId) return;
+    const pc = s => { if (!s) return 0; s = s.trim().toLowerCase(); if (s.endsWith('k')) return parseFloat(s)*1000; if (s.endsWith('m')) return parseFloat(s)*1e6; return parseInt(s)||0; };
+    const l = a.querySelector('[data-testid="like"] [data-testid="app-text-transition-container"]')?.textContent;
+    const rt = a.querySelector('[data-testid="retweet"] [data-testid="app-text-transition-container"]')?.textContent;
+    const rp = a.querySelector('[data-testid="reply"] [data-testid="app-text-transition-container"]')?.textContent;
+    if (l||rt||rp) chrome.runtime.sendMessage({type:'TRACK_ENGAGEMENT',payload:{postId:pd.postId,likes:pc(l),retweets:pc(rt),replies:pc(rp)}});
   });
-}
-const obs = new MutationObserver(ms => { if (ms.some(m => m.addedNodes.length)) requestAnimationFrame(process); });
-function init() { process(); obs.observe(document.body, { childList: true, subtree: true }); }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-let lastUrl = location.href;
-new MutationObserver(() => { if (location.href !== lastUrl) { lastUrl = location.href; setTimeout(process, 1000); } }).observe(document.body, { childList: true, subtree: true });
+}, 30000);

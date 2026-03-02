@@ -1,24 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { getLocalPrompts, addLocalPrompt, deleteLocalPrompt, type LocalPrompt } from '../lib/storage';
-export function PromptManager({onSelect,selectedId}:{onSelect?:(p:LocalPrompt)=>void;selectedId?:string|null}) {
-  const [prompts, setPrompts] = useState<LocalPrompt[]>([]); const [showAdd, setShowAdd] = useState(false);
-  const [newText, setNewText] = useState(''); const [newTags, setNewTags] = useState(''); const [newTone, setNewTone] = useState('casual');
-  useEffect(()=>{load();},[]);
-  async function load() { const p = await getLocalPrompts(); p.sort((a,b)=>b.avgEngagement-a.avgEngagement); setPrompts(p); }
-  async function add() { if(!newText.trim()) return; await addLocalPrompt(newText.trim(),newTags.split(',').map(t=>t.trim()).filter(Boolean),newTone); setNewText(''); setNewTags(''); setShowAdd(false); await load(); }
-  async function del(id:string) { await deleteLocalPrompt(id); await load(); }
-  return (<div className="space-y-3">
-    <div className="flex justify-between items-center"><h3 className="font-semibold">Prompts</h3><button onClick={()=>setShowAdd(!showAdd)} className="text-[#1d9bf0] text-sm hover:underline">{showAdd?'Cancel':'+ Add'}</button></div>
-    {showAdd&&<div className="bg-[#0d1117] rounded-lg p-3 space-y-2 border border-[#2f3336]">
-      <textarea value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Prompt..." className="w-full bg-[#15202b] rounded p-2 text-sm resize-none h-20 border border-[#2f3336] outline-none"/>
-      <input value={newTags} onChange={e=>setNewTags(e.target.value)} placeholder="Tags (comma sep)" className="w-full bg-[#15202b] rounded p-2 text-sm border border-[#2f3336] outline-none"/>
-      <div className="flex gap-2"><select value={newTone} onChange={e=>setNewTone(e.target.value)} className="bg-[#15202b] rounded p-2 text-sm border border-[#2f3336] flex-1"><option value="casual">Casual</option><option value="professional">Professional</option><option value="provocative">Provocative</option><option value="contrarian">Contrarian</option></select>
-      <button onClick={add} className="bg-[#1d9bf0] text-white px-4 py-2 rounded text-sm font-medium">Save</button></div></div>}
-    <div className="space-y-2">
-      {prompts.length===0&&<p className="text-[#71767b] text-sm text-center py-4">No prompts yet.</p>}
-      {prompts.map(p=>(<div key={p.id} onClick={()=>onSelect?.(p)} className={`rounded-lg p-3 border cursor-pointer ${selectedId===p.id?'border-[#1d9bf0] bg-[#1d9bf0]/10':'border-[#2f3336] bg-[#0d1117] hover:border-[#71767b]'}`}>
-        <div className="flex justify-between items-start"><p className="text-sm flex-1">{p.text}</p><button onClick={e=>{e.stopPropagation();del(p.id);}} className="text-[#71767b] hover:text-red-400 ml-2 text-xs">✕</button></div>
-        <div className="flex gap-2 mt-2 flex-wrap">{p.tags.map(t=><span key={t} className="bg-[#2f3336] text-xs px-2 py-0.5 rounded">{t}</span>)}<span className="text-xs text-[#71767b] ml-auto">{p.useCount>0?`📊 ${p.avgEngagement.toFixed(1)} (${p.useCount})`:'No data'}</span></div>
-      </div>))}
-    </div></div>);
+import React, { useEffect, useState } from "react";
+interface Prompt { id: string; text: string; tags: string[]; tone: string; avgEngagement: number; useCount: number; createdAt: number; }
+export default function PromptManager() {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [editing, setEditing] = useState<Prompt|null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [text, setText] = useState("");
+  const [tags, setTags] = useState("");
+  const [tone, setTone] = useState("casual");
+  const [activeId, setActiveId] = useState("");
+  useEffect(() => { load(); }, []);
+  async function load() {
+    const data = await chrome.storage.local.get({ prompts: [], activePromptId: "" });
+    const sorted = (data.prompts||[]).sort((a:any,b:any)=>(b.avgEngagement||0)-(a.avgEngagement||0));
+    setPrompts(sorted); setActiveId(data.activePromptId || sorted[0]?.id || "");
+  }
+  async function handleSave() {
+    if (!text.trim()) return;
+    const data = await chrome.storage.local.get({ prompts: [] }); const list = data.prompts || [];
+    if (editing) { const idx = list.findIndex((p:any)=>p.id===editing.id); if (idx>=0) list[idx]={...list[idx],text:text.trim(),tags:tags.split(",").map((t:string)=>t.trim()).filter(Boolean),tone}; }
+    else { list.push({id:crypto.randomUUID(),text:text.trim(),tags:tags.split(",").map((t:string)=>t.trim()).filter(Boolean),tone,createdAt:Date.now(),totalEngagement:0,useCount:0,avgEngagement:0}); }
+    await chrome.storage.local.set({prompts:list}); setText("");setTags("");setTone("casual");setEditing(null);setShowForm(false); await load();
+  }
+  async function handleDelete(id:string) { if(!confirm("Delete?"))return; const data=await chrome.storage.local.get({prompts:[]}); await chrome.storage.local.set({prompts:data.prompts.filter((p:any)=>p.id!==id)}); await load(); }
+  async function handleSetActive(id:string) { setActiveId(id); await chrome.storage.local.set({activePromptId:id}); }
+  return (
+    <div className="prompt-manager">
+      <div className="section-header"><h3>Prompts</h3><button className="btn btn-primary btn-sm" onClick={()=>{setEditing(null);setText("");setTags("");setTone("casual");setShowForm(!showForm);}}>{showForm?"Cancel":"+ New"}</button></div>
+      {showForm && <div className="prompt-form">
+        <textarea className="input textarea" placeholder="Write prompt instructions..." value={text} onChange={(e)=>setText(e.target.value)} rows={4}/>
+        <input className="input" placeholder="Tags (comma separated)" value={tags} onChange={(e)=>setTags(e.target.value)}/>
+        <select className="input select" value={tone} onChange={(e)=>setTone(e.target.value)}><option value="casual">Casual</option><option value="professional">Professional</option><option value="provocative">Provocative</option><option value="contrarian">Contrarian</option></select>
+        <button className="btn btn-primary" onClick={handleSave}>{editing?"Update":"Save"} Prompt</button>
+      </div>}
+      {prompts.length===0&&!showForm&&<div className="empty-state-small"><p>No prompts yet.</p></div>}
+      <div className="prompt-list">{prompts.map((p)=>(
+        <div key={p.id} className={"prompt-card "+(activeId===p.id?"active":"")}>
+          <div className="prompt-card-header">
+            <div className="prompt-rank">{activeId===p.id&&<span className="active-badge">Active</span>}<span className="prompt-tone-badge">{p.tone}</span></div>
+            <div className="prompt-actions">
+              <button className="btn-icon" onClick={()=>handleSetActive(p.id)}>{activeId===p.id?"[x]":"[ ]"}</button>
+              <button className="btn-icon" onClick={()=>{setEditing(p);setText(p.text);setTags(p.tags.join(", "));setTone(p.tone);setShowForm(true);}}>Edit</button>
+              <button className="btn-icon" onClick={()=>handleDelete(p.id)}>Del</button>
+            </div>
+          </div>
+          <p className="prompt-text">{p.text}</p>
+          <div className="prompt-meta">{p.tags.map((t)=><span key={t} className="tag">{t}</span>)}<span className="stat-small">Used {p.useCount||0}x</span><span className="stat-small">Avg: {(p.avgEngagement||0).toFixed(1)}</span></div>
+        </div>
+      ))}</div>
+    </div>
+  );
 }
