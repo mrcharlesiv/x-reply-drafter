@@ -1,36 +1,100 @@
-# X Reply Drafter (Chrome Extension)
+# X Reply Drafter v2.0
 
-AI-assisted reply drafting for X (twitter.com / x.com).
+AI-powered reply drafting Chrome extension for X/Twitter with engagement tracking, prompt ranking, and notes.
+
+## Architecture
+
+### Chrome Extension (`extension/`)
+- **React popup** with 5 tabs: Dashboard, Prompts, Post Library, Analytics, Settings
+- **Content script** injects "Draft Reply" button on every X post
+- **Background script** routes messages between content script and LLM APIs
+- **Works standalone** (direct LLM calls) or with optional backend
+
+### Backend API (`backend/`)
+- **Hono on Vercel** with Vercel KV (Redis) storage
+- Optional — extension works without it via direct API calls
+- Provides server-side encryption for API keys
 
 ## Features
-- Injects **Draft Reply** button on each post
-- Reads author + post text (+ quote tweet text when present)
-- Calls configurable AI endpoint (OpenAI, Anthropic, OpenAI-compatible)
-- No popup/overlay: generated text is inserted directly into X's reply composer
-- If reply composer is closed, it clicks the reply icon first, waits for composer, then inserts
-- Button shows inline **Generating...** state during draft creation
-- Settings page for API key, endpoint, model, and system prompt
-- Manifest V3, mutation-observer based injection for X's dynamic timeline
 
-## Install (Developer mode)
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select this folder: `x-reply-drafter/`
-5. Open extension options and configure API settings
+### Core
+- Draft Reply button on every X post (content script injection)
+- Support for OpenAI, Anthropic, and any OpenAI-compatible API
+- Auto-fetch available models from entered API key
+- 4 tone/style modes: Professional, Casual, Provocative, Contrarian
+- Auto-fill X compose box with drafted reply
+- Auto-submit toggle (posts without manual click)
 
-## Provider notes
-- **OpenAI-compatible** uses Chat Completions-style payload + `Authorization: Bearer ...`
-- **Anthropic** uses Messages payload + headers `x-api-key` and `anthropic-version`
-- Provider auto-detection:
-  - endpoint contains `anthropic.com`, or
-  - model starts with `claude`
+### Prompts
+- Save and manage multiple draft prompts with tags
+- Prompts ranked by average engagement
+- Active prompt selector
 
-## UX behavior
-- Rate-limits draft generation requests (~1.5s minimum spacing)
-- Handles timeline re-renders via debounced mutation observer
-- Uses contenteditable insertion + input/change events so X picks up generated text
-- Briefly surfaces insert/error state on the Draft Reply button label
+### Engagement Tracking
+- Captures likes, RTs, replies on drafted posts
+- Post library with full history
+- Periodic engagement scraping from X
 
-## Default system prompt
-> You are a witty, knowledgeable person on X. Write a concise, engaging reply. No hashtags. Match the conversational tone. Keep it under 280 characters unless the topic demands more depth.
+### Notes
+- Each reply has an attached notes field
+- Add/edit notes after posting
+- Search and filter posts by notes content
+- Notes visible alongside engagement metrics
+
+### Analytics
+- Engagement by tone (bar chart)
+- Best posting times (hour heatmap)
+- Top performing prompts ranked by engagement
+- Summary statistics
+
+## Setup
+
+### Extension (standalone mode)
+```bash
+cd extension
+npm install
+npm run build
+# Load extension/dist as unpacked extension in Chrome
+```
+
+1. Go to `chrome://extensions`
+2. Enable Developer Mode
+3. Click "Load unpacked"
+4. Select the `extension/dist` folder
+5. Open extension popup → Settings → Enter API key
+
+### Backend (optional)
+```bash
+cd backend
+npm install
+# Set environment variables:
+# ENCRYPTION_SECRET=your-32-char-secret
+# KV_REST_API_URL=your-vercel-kv-url
+# KV_REST_API_TOKEN=your-vercel-kv-token
+vercel deploy
+```
+
+Then enter your backend URL in extension Settings.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/draft` | Generate reply draft via LLM |
+| POST | `/api/draft/models` | Fetch available models |
+| GET | `/api/prompts` | List prompts (ranked by engagement) |
+| POST | `/api/prompts` | Create/update prompt |
+| DELETE | `/api/prompts/:id` | Delete prompt |
+| GET | `/api/posts` | List posts with engagement + notes |
+| GET | `/api/posts/:postId` | Get single post detail |
+| POST | `/api/posts` | Save new reply record |
+| POST | `/api/posts/track-engagement` | Update engagement metrics |
+| POST | `/api/posts/notes/:postId` | Add/update notes |
+| GET | `/api/posts/analytics/summary` | Engagement analytics |
+| GET/POST | `/api/settings` | User settings |
+
+## Tech Stack
+- Frontend: React 19 + Vite + TypeScript
+- Backend: Hono + Vercel KV
+- Extension: Chrome Manifest V3
+- No Supabase — lightweight, self-contained
