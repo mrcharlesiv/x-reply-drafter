@@ -21,7 +21,7 @@ export default function Settings() {
     try{
       if(provider==="anthropic"){
         // Anthropic models are static
-        const list=["claude-3-5-sonnet-20241022","claude-sonnet-4-20250514","claude-3-5-haiku-20241022"];
+        const list=["claude-opus-4-20250514","claude-sonnet-4-20250514","claude-sonnet-4-6-20250627","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"];
         setModels(list);
         await chrome.storage.local.set({availableModels:list});
         setStatus("Found "+list.length+" Anthropic models");
@@ -63,7 +63,7 @@ export default function Settings() {
   return(
     <div className="settings">
       <div className="section"><h3>LLM Provider</h3>
-        <select className="input select" value={provider} onChange={(e)=>{const p=e.target.value as any;setProvider(p);setModels([]);if(p==="openai")setModel("gpt-4o-mini");if(p==="anthropic")setModel("claude-sonnet-4-20250514");}}><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="custom">Custom</option></select>
+        <select className="input select" value={provider} onChange={(e)=>{const p=e.target.value as any;setProvider(p);setModels([]);if(p==="openai")setModel("gpt-4o-mini");if(p==="anthropic")setModel("claude-sonnet-4-6-20250627");}}><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="custom">Custom</option></select>
         {provider==="custom"&&<input className="input" type="url" placeholder="API Base URL" value={baseUrl} onChange={(e)=>setBaseUrl(e.target.value)}/>}
       </div>
       <div className="section"><h3>API Key</h3><input className="input" type="password" placeholder={"Enter "+provider+" API key"} value={apiKey} onChange={(e)=>setApiKey(e.target.value)}/></div>
