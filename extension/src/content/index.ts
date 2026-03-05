@@ -147,16 +147,27 @@ function inject(a) {
         if (cb) {
           cb.focus();
           
-          // Modern approach: set value + dispatch events
-          if (cb.tagName === 'TEXTAREA') {
-            (cb as HTMLTextAreaElement).value = r.draft;
-          } else if (cb.contentEditable === 'true') {
-            cb.textContent = r.draft;
+          // Clear any existing content first
+          if (cb.contentEditable === 'true') {
+            // Select all existing content and delete it
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(cb);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+            document.execCommand('delete', false);
           }
           
-          // Dispatch input and change events for framework reactivity
-          cb.dispatchEvent(new Event('input', { bubbles: true }));
-          cb.dispatchEvent(new Event('change', { bubbles: true }));
+          // Use execCommand insertText — this triggers Draft.js/React internal state
+          // so X recognizes the text as real input (not placeholder)
+          document.execCommand('insertText', false, r.draft);
+          
+          // Fallback: if execCommand didn't work, try clipboard approach
+          if (!cb.textContent || cb.textContent.trim().length === 0) {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', r.draft);
+            cb.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+          }
           
           // Save post data
           chrome.runtime.sendMessage({
