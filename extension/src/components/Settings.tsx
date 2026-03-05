@@ -21,7 +21,7 @@ export default function Settings() {
     try{
       if(provider==="anthropic"){
         // Anthropic models are static
-        const list=["claude-opus-4-20250514","claude-sonnet-4-20250514","claude-sonnet-4-6-20250627","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"];
+        const list=["claude-opus-4-6-20250627","claude-opus-4-20250514","claude-sonnet-4-6-20250627","claude-sonnet-4-20250514","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"];
         setModels(list);
         await chrome.storage.local.set({availableModels:list});
         setStatus("Found "+list.length+" Anthropic models");
