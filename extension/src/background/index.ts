@@ -48,6 +48,8 @@ async function handleDraftReply(payload) {
   const sys = buildSysPrompt(tone, ap?.text);
   const usr = `Reply to this X post by @${payload.author}: "${payload.text}"`;
   
+  console.log("[XRD] Draft request:", { provider: s.apiProvider, model: s.selectedModel, hasKey: !!s.apiKey, keyPrefix: s.apiKey?.slice(0, 8) + "..." });
+  
   let draft;
   
   if (s.apiProvider === "anthropic") {
@@ -71,10 +73,11 @@ async function handleDraftReply(payload) {
 
       if (!res.ok) {
         const errText = await res.text();
+        console.error("Anthropic error response:", res.status, errText);
         if (res.status === 401) {
           throw new Error("Invalid Anthropic API key");
         }
-        throw new Error(`Anthropic API error: ${res.status}`);
+        throw new Error(`Anthropic API error ${res.status}: ${errText.slice(0, 200)}`);
       }
 
       const d = await res.json();
@@ -119,13 +122,14 @@ async function handleDraftReply(payload) {
 
       if (!res.ok) {
         const errText = await res.text();
+        console.error("OpenAI error response:", res.status, errText);
         if (res.status === 401) {
           throw new Error("Invalid API key for selected provider");
         }
         if (res.status === 404) {
-          throw new Error(`Model not found. Check your selected model or endpoint.`);
+          throw new Error(`Model "${s.selectedModel}" not found. Check your selected model or endpoint.`);
         }
-        throw new Error(`API error: ${res.status}`);
+        throw new Error(`API error ${res.status}: ${errText.slice(0, 200)}`);
       }
 
       const d = await res.json();
