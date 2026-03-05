@@ -21,6 +21,7 @@ function copyFiles() {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), copyFiles()],
   build: {
     outDir: 'dist',
