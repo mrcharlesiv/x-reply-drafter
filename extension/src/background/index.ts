@@ -58,7 +58,7 @@ async function handleDraftReply(payload) {
           "Content-Type": "application/json",
           "x-api-key": s.apiKey,
           "anthropic-version": "2023-06-01",
-          // Note: anthropic-dangerous-direct-browser-access removed - use backend for Anthropic
+          "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
           model: s.selectedModel || "claude-3-5-sonnet-20241022",
