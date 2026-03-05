@@ -28,9 +28,14 @@ ${baseTone}
 
 Rules:
 - Keep it concise (under 280 characters preferred)
-- Sound natural and human, not AI-generated
-- Be specific and substantive - no generic filler
+- Sound like a real person, not AI. Write like you text a friend.
+- Use contractions naturally (it's, don't, wouldn't)
+- Be specific and substantive — no generic filler
 - Match the tone of the conversation
+- NEVER use these words: delve, tapestry, vibrant, crucial, comprehensive, meticulous, seamless, groundbreaking, leverage, synergy, transformative, paramount, multifaceted, myriad, cornerstone, reimagine, empower, catalyst, robust, landscape, navigate, utilize, furthermore, moreover, nevertheless, invaluable, profound, realm, plethora, foster, bolster, showcase, commence, facilitate, elucidate, augment, pivotal, underscore
+- NEVER start with: "Great point", "Love this", "This is so true", "Absolutely", "I couldn't agree more", "This resonates", emoji
+- NEVER use phrases: "at the end of the day", "game changer", "food for thought", "it's worth noting", "in today's world", "let's dive in", "the real story here"
+- Just say the thing. Get to the point. Be direct.
 - Return ONLY the reply text, no metadata${customNote}`;
 }
 
@@ -143,7 +148,143 @@ async function handleDraftReply(payload) {
     }
   }
   
+  // Strip AI-isms before returning
+  draft = deAI(draft);
+  
   return { draft, promptId: ap?.id || "", tone };
+}
+
+/**
+ * Remove common AI writing patterns from draft text.
+ * Runs after every LLM call — strips dead-giveaway words,
+ * cliché openers, filler phrases, and over-enthusiastic patterns.
+ */
+function deAI(text: string): string {
+  let t = text;
+
+  // --- PHASE 1: Kill dead-giveaway AI words (replace with nothing or simpler alt) ---
+  const wordSwaps: [RegExp, string][] = [
+    // Tier 1: Absolute dead giveaways
+    [/\bdelve(?:s|d)?\b/gi, "dig"],
+    [/\btapestry\b/gi, "mix"],
+    [/\bvibrant\b/gi, "lively"],
+    [/\bcrucial\b/gi, "key"],
+    [/\bcomprehensive\b/gi, "full"],
+    [/\bmeticulous(?:ly)?\b/gi, "careful$1"],
+    [/\bmeticulously\b/gi, "carefully"],
+    [/\bseamless(?:ly)?\b/gi, "smooth$1"],
+    [/\bseamlessly\b/gi, "smoothly"],
+    [/\bgroundbreaking\b/gi, "new"],
+    [/\bleverage(?:s|d)?\b/gi, "use"],
+    [/\bsynergy\b/gi, "overlap"],
+    [/\btransformative\b/gi, "big"],
+    [/\bparamount\b/gi, "important"],
+    [/\bmultifaceted\b/gi, "complex"],
+    [/\bmyriad\b/gi, "many"],
+    [/\bcornerstone\b/gi, "foundation"],
+    [/\breimaginee?(?:s|d)?\b/gi, "rethink"],
+    [/\bempower(?:s|ed|ing)?\b/gi, "help"],
+    [/\bcatalyst\b/gi, "driver"],
+    [/\bbolster(?:s|ed)?\b/gi, "boost"],
+    [/\bfoster(?:s|ed|ing)?\b/gi, "build"],
+    [/\brobust\b/gi, "strong"],
+    [/\bpivotal\b/gi, "key"],
+    [/\bunderscore(?:s|d)?\b/gi, "highlight"],
+    [/\blandscape\b/gi, "space"],
+    [/\bshowcase(?:s|d)?\b/gi, "show"],
+    [/\bnavigat(?:e|es|ed|ing)\b/gi, "handle"],
+    [/\bembark(?:s|ed)?\b/gi, "start"],
+    [/\beverchanging\b/gi, "changing"],
+    [/\bever-changing\b/gi, "changing"],
+    [/\bintricate\b/gi, "complex"],
+    [/\bcommenc(?:e|es|ed)\b/gi, "start"],
+    [/\butiliz(?:e|es|ed|ing)\b/gi, "use"],
+    [/\bfacilitat(?:e|es|ed|ing)\b/gi, "help"],
+    [/\bencompass(?:es|ed|ing)?\b/gi, "include"],
+    [/\baugment(?:s|ed|ing)?\b/gi, "add to"],
+    [/\belucidat(?:e|es|ed|ing)\b/gi, "explain"],
+    [/\bdemystif(?:y|ies|ied|ying)\b/gi, "clarify"],
+    [/\bprofound(?:ly)?\b/gi, "deep"],
+    [/\bprofoundly\b/gi, "deeply"],
+    [/\binvaluable\b/gi, "useful"],
+    [/\bundeniable?\b/gi, "clear"],
+    [/\brealm\b/gi, "area"],
+    [/\bplethora\b/gi, "lot"],
+
+    // Tier 2: Softer giveaways
+    [/\badditionally\b/gi, "also"],
+    [/\bfurthermore\b/gi, "also"],
+    [/\bmoreover\b/gi, "also"],
+    [/\bnevertheless\b/gi, "still"],
+    [/\bnonetheless\b/gi, "still"],
+    [/\bconsequently\b/gi, "so"],
+    [/\bsubsequently\b/gi, "then"],
+    [/\bnotwithstanding\b/gi, "despite"],
+    [/\bin\s+essence\b/gi, "basically"],
+    [/\bIt'?s\s+worth\s+noting\s+that\b/gi, ""],
+    [/\bIt\s+is\s+important\s+to\s+note\s+that\b/gi, ""],
+    [/\bIt'?s\s+important\s+to\s+note\b/gi, ""],
+  ];
+
+  for (const [re, replacement] of wordSwaps) {
+    t = t.replace(re, replacement);
+  }
+
+  // --- PHASE 2: Kill cliché AI phrases ---
+  const phraseKills: [RegExp, string][] = [
+    [/\bIn today'?s (?:world|landscape|digital age|era)\b/gi, ""],
+    [/\bLet'?s (?:dive|delve|unpack)\b/gi, ""],
+    [/\bAt the end of the day[,]?\s*/gi, ""],
+    [/\bThe real (?:story|takeaway|question) here is\b/gi, ""],
+    [/\bWhat'?s interesting is\b/gi, ""],
+    [/\bHere'?s the thing[:\s]*/gi, ""],
+    [/\bThe thing is[,]?\s*/gi, ""],
+    [/\bI couldn'?t agree more\b/gi, "Agreed"],
+    [/\bThis is (?:so |really |truly )?spot[- ]on\b/gi, "Good point"],
+    [/\bAbsolutely[!.]?\s*(?=\w)/gi, ""],
+    [/\bThis resonates (?:deeply |so much |with me)\b/gi, "I feel this"],
+    [/\bserves as a testament to\b/gi, "shows"],
+    [/\bin the realm of\b/gi, "in"],
+    [/\bharness the power of\b/gi, "use"],
+    [/\ba testament to\b/gi, "proof of"],
+    [/\bshed(?:s)? light on\b/gi, "explain"],
+    [/\bpave(?:s|d)? the way\b/gi, "lead"],
+    [/\bgame[- ]changer\b/gi, "big deal"],
+    [/\bfood for thought\b/gi, "worth thinking about"],
+    [/\btip of the iceberg\b/gi, "just the start"],
+    [/\bonly time will tell\b/gi, "we'll see"],
+    [/\bat the forefront\b/gi, "leading"],
+    [/\bthe bottom line is\b/gi, ""],
+    [/\bkey takeaway\b/gi, "main point"],
+  ];
+
+  for (const [re, replacement] of phraseKills) {
+    t = t.replace(re, replacement);
+  }
+
+  // --- PHASE 3: Kill emoji spam (AI loves starting with 🔥💡🚀) ---
+  // Remove leading emojis
+  t = t.replace(/^[\s]*(?:[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]\s*)+/gu, "");
+
+  // --- PHASE 4: Kill over-enthusiastic openers ---
+  t = t.replace(/^(?:Great (?:point|take|insight)[!.]?\s*)/i, "");
+  t = t.replace(/^(?:Love this[!.]?\s*)/i, "");
+  t = t.replace(/^(?:This is (?:great|amazing|brilliant|fantastic)[!.]?\s*)/i, "");
+  t = t.replace(/^(?:What a (?:great|brilliant|fantastic|insightful) (?:point|take|post|thread)[!.]?\s*)/i, "");
+
+  // --- PHASE 5: Clean up artifacts ---
+  // Fix double spaces from removals
+  t = t.replace(/\s{2,}/g, " ");
+  // Fix leading/trailing whitespace
+  t = t.trim();
+  // Fix sentences starting with lowercase after removal
+  t = t.replace(/^\s*([a-z])/, (_, c) => c.toUpperCase());
+  // Remove leading comma/period from phrase removals
+  t = t.replace(/^[,.\s]+/, "").trim();
+  // Capitalize first letter
+  if (t.length > 0) t = t[0].toUpperCase() + t.slice(1);
+
+  return t;
 }
 
 async function syncToBackend(path: string, body: object) {
