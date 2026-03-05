@@ -141,9 +141,16 @@ export default function Settings() {
     setProfiles(updated);
     await chrome.storage.local.set({ apiProfiles: updated });
 
-    // If this is the only profile or was active, sync to legacy fields
+    // Always sync legacy fields for the active/only profile
     if (updated.length === 1 || activeProfileId === id || !activeProfileId) {
-      await switchProfile(id);
+      setActiveProfileId(id);
+      await chrome.storage.local.set({
+        activeProfileId: id,
+        apiKey: editKey,
+        apiProvider: editProvider,
+        apiBaseUrl: editBaseUrl,
+        selectedModel: editModel,
+      });
     }
 
     setEditing(false);
