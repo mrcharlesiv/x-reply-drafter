@@ -35,6 +35,8 @@ Rules:
 - NEVER use these words: delve, tapestry, vibrant, crucial, comprehensive, meticulous, seamless, groundbreaking, leverage, synergy, transformative, paramount, multifaceted, myriad, cornerstone, reimagine, empower, catalyst, robust, landscape, navigate, utilize, furthermore, moreover, nevertheless, invaluable, profound, realm, plethora, foster, bolster, showcase, commence, facilitate, elucidate, augment, pivotal, underscore
 - NEVER start with: "Great point", "Love this", "This is so true", "Absolutely", "I couldn't agree more", "This resonates", emoji
 - NEVER use phrases: "at the end of the day", "game changer", "food for thought", "it's worth noting", "in today's world", "let's dive in", "the real story here"
+- NEVER use em dashes (—), semicolons, or bullet points. Use commas, periods, dashes (-).
+- No quotation marks around single words for "emphasis"
 - Just say the thing. Get to the point. Be direct.
 - Return ONLY the reply text, no metadata${customNote}`;
 }
@@ -262,7 +264,21 @@ function deAI(text: string): string {
     t = t.replace(re, replacement);
   }
 
-  // --- PHASE 3: Kill emoji spam (AI loves starting with 🔥💡🚀) ---
+  // --- PHASE 3: Replace AI punctuation/formatting ---
+  // Em dashes → regular dashes or commas
+  t = t.replace(/\s*—\s*/g, " - ");
+  // Curly quotes → straight quotes
+  t = t.replace(/[\u201C\u201D]/g, '"');
+  t = t.replace(/[\u2018\u2019]/g, "'");
+  // Semicolons → periods (humans rarely use semicolons on Twitter)
+  t = t.replace(/;\s*/g, ". ");
+  // Kill bullet points / numbered lists
+  t = t.replace(/^\s*[\u2022•●]\s*/gm, "");
+  t = t.replace(/^\s*\d+[.)]\s*/gm, "");
+  // Kill "Here's why:" / "Here's how:" patterns
+  t = t.replace(/Here'?s (?:why|how|the thing)[:\s]*/gi, "");
+
+  // --- PHASE 4: Kill emoji spam (AI loves starting with 🔥💡🚀) ---
   // Remove leading emojis
   t = t.replace(/^[\s]*(?:[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]\s*)+/gu, "");
 
