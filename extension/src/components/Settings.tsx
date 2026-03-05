@@ -42,15 +42,23 @@ export default function Settings() {
       else{
         // OpenAI
         const base=baseUrl||"https://api.openai.com/v1";
-        const res=await fetch(base+"/models",{headers:{Authorization:"Bearer "+apiKey}});
-        if(!res.ok){if(res.status===401)throw new Error("Unauthorized - check API key");throw new Error("Status "+res.status);}
-        const d=await res.json() as any;
-        const list=(d.data||[]).map((m:any)=>m.id).sort();
-        if(list.length===0)throw new Error("No models found");
-        setModels(list);
-        await chrome.storage.local.set({availableModels:list});
-        setStatus("Found "+list.length+" models");
-        if(list.length>0&&!list.includes(model))setModel(list[0]);
+        try{
+          const res=await fetch(base+"/models",{headers:{Authorization:"Bearer "+apiKey}});
+          if(!res.ok){if(res.status===401)throw new Error("Unauthorized - check API key");throw new Error("Status "+res.status);}
+          const d=await res.json() as any;
+          const list=(d.data||[]).map((m:any)=>m.id).filter((id:string)=>id.startsWith("gpt-")||id.startsWith("o")||id.startsWith("chatgpt")).sort();
+          if(list.length===0)throw new Error("No chat models found");
+          setModels(list);
+          await chrome.storage.local.set({availableModels:list});
+          setStatus("Found "+list.length+" models");
+          if(list.length>0&&!list.includes(model))setModel(list[0]);
+        }catch(fetchErr:any){
+          // Fallback: static list of common OpenAI models
+          const fallback=["gpt-5.4","gpt-4.1","gpt-4.1-mini","gpt-4o","gpt-4o-mini","o3","o4-mini"];
+          setModels(fallback);
+          await chrome.storage.local.set({availableModels:fallback});
+          setStatus("Could not fetch models ("+fetchErr.message+"). Using known models.");
+        }
       }
     }catch(err:any){
       console.error("Fetch models error:",err);
@@ -58,7 +66,7 @@ export default function Settings() {
     }
     setFetchingModels(false);
   }
-  async function handleSave(){setSaving(true);await chrome.storage.local.set({apiKey,apiProvider:provider,apiBaseUrl:baseUrl,selectedModel:model,autoSubmit,backendUrl});setStatus("Saved");setSaving(false);setTimeout(()=>setStatus(""),2000);}
+  async function handleSave(){setSaving(true);try{await chrome.storage.local.set({apiKey,apiProvider:provider,apiBaseUrl:baseUrl,selectedModel:model,autoSubmit,backendUrl});const verify:any=await new Promise(r=>chrome.storage.local.get({apiKey:""},r));if(verify.apiKey===apiKey){setStatus("Saved ✓");}else{setStatus("Save may have failed - try again");}}catch(e:any){setStatus("Error: "+e.message);}setSaving(false);setTimeout(()=>setStatus(""),3000);}
   if(loading)return<div className="loading">Loading...</div>;
   return(
     <div className="settings">
