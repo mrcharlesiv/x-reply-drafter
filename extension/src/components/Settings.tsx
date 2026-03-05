@@ -10,8 +10,8 @@ interface ApiProfile {
 }
 
 const ANTHROPIC_MODELS = [
-  "claude-opus-4-6-20250627","claude-opus-4-20250514",
-  "claude-sonnet-4-6-20250627","claude-sonnet-4-20250514",
+  "claude-opus-4-6","claude-opus-4-20250514",
+  "claude-sonnet-4-6","claude-sonnet-4-20250514",
   "claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022",
 ];
 const OPENAI_FALLBACK = ["gpt-5.4","gpt-4.1","gpt-4.1-mini","gpt-4o","gpt-4o-mini","o3","o4-mini"];
@@ -259,7 +259,7 @@ export default function Settings() {
             setEditProvider(p);
             setEditModels([]);
             if (p === "openai") setEditModel("gpt-4o-mini");
-            if (p === "anthropic") { setEditModel("claude-sonnet-4-6-20250627"); setEditModels(ANTHROPIC_MODELS); }
+            if (p === "anthropic") { setEditModel("claude-sonnet-4-6"); setEditModels(ANTHROPIC_MODELS); }
           }}>
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
