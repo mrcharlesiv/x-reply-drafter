@@ -51,13 +51,14 @@ ONE IDEA PER REPLY. Lead with the punch. Match parent energy.
 // Build system prompt based on tone and custom prompt
 function buildSystemPrompt(tone: string, customPrompt?: string): string {
   const toneInstructions: Record<string, string> = {
+    'viral-model': 'Follow the viral reply model exactly. Prioritize questions above all else.',
     professional: 'Write a thoughtful, professional reply. Be insightful and add value to the conversation. Maintain credibility.',
     casual: 'Write a casual, conversational reply. Be friendly and relatable. Use natural language.',
     provocative: 'Write a bold, provocative reply that challenges assumptions. Be attention-grabbing but not offensive.',
     contrarian: 'Write a contrarian reply that offers an opposing viewpoint. Be respectful but firm in disagreeing.',
   };
 
-  const base = toneInstructions[tone] || toneInstructions.casual;
+  const base = toneInstructions[tone] || toneInstructions['viral-model'];
 
   return `You are a skilled X (Twitter) reply writer. Your job is to draft engaging replies to posts.
 

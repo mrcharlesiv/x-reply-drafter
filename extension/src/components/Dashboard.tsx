@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 export default function Dashboard() {
   const [stats, setStats] = useState({ totalPosts: 0, totalEngagement: 0 });
   const [activePrompt, setActivePrompt] = useState(null);
-  const [tone, setTone] = useState('casual');
+  const [tone, setTone] = useState('viral-model');
   const [hasKey, setHasKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [byTone, setByTone] = useState([]);
   useEffect(() => { load(); }, []);
   async function load() {
-    const data = await chrome.storage.local.get({ apiKey: '', defaultTone: 'casual', activePromptId: '', prompts: [], posts: [] });
+    const data = await chrome.storage.local.get({ apiKey: '', defaultTone: 'viral-model', activePromptId: '', prompts: [], posts: [] });
     setHasKey(!!data.apiKey); setTone(data.defaultTone);
     const posts = data.posts || [];
     const totalEng = posts.reduce((s, p) => s + (p.engagement?.likes || 0) + (p.engagement?.retweets || 0) + (p.engagement?.replies || 0), 0);
@@ -21,7 +21,7 @@ export default function Dashboard() {
   }
   if (loading) return React.createElement('div', {className:'loading'}, 'Loading...');
   if (!hasKey) return React.createElement('div', {className:'empty-state'}, React.createElement('h3', null, 'Set Up API Key'), React.createElement('p', null, 'Go to Settings to configure your LLM API key.'));
-  const tones = ['professional', 'casual', 'provocative', 'contrarian'];
+  const tones = ['viral-model', 'professional', 'casual', 'provocative', 'contrarian'];
   const maxAvg = Math.max(...byTone.map(t => t.avg), 1);
   return React.createElement('div', {className:'dashboard'},
     React.createElement('div', {className:'stat-grid'},

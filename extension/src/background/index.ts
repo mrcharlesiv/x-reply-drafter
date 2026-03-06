@@ -55,13 +55,14 @@ async function getS() {
 
 function buildSysPrompt(tone, custom) {
   const toneMap = {
+    'viral-model': "Follow the viral reply model exactly. Prioritize questions above all else.",
     professional: "Write a thoughtful, professional reply.",
     casual: "Write a casual, conversational reply.",
     provocative: "Write a bold, provocative reply.",
     contrarian: "Write a contrarian reply.",
   };
   
-  const baseTone = toneMap[tone] || toneMap.casual;
+  const baseTone = toneMap[tone] || toneMap['viral-model'];
   const customNote = custom ? `\n\nAdditional instructions: ${custom}` : "";
   
   return `You are a skilled X (Twitter) reply writer.
