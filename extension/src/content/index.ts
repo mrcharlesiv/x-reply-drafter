@@ -157,7 +157,7 @@ function inject(a) {
           });
           cb.dispatchEvent(pasteEvent);
           
-          // Save post data
+          // Save post data (includes smart engine metadata)
           chrome.runtime.sendMessage({
             type: 'SAVE_POST',
             payload: {
@@ -167,8 +167,17 @@ function inject(a) {
               replyText: r.draft,
               promptId: r.promptId || '',
               tone: r.tone || 'casual',
+              tweetType: r.tweetType || '',
+              score: r.score || 0,
+              strategy: r.strategy || '',
             },
           });
+          
+          // Log smart engine details
+          if (r.tweetType) {
+            console.log(`[XRD] Tweet type: ${r.tweetType} | Strategy: ${r.strategy} | Score: ${r.score}/100`);
+            if (r.alternates?.length) console.log(`[XRD] Alternates:`, r.alternates);
+          }
           
           // Handle auto-submit
           chrome.storage.local.get({ autoSubmit: false }, (d) => {
