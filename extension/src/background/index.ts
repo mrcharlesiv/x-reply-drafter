@@ -1,12 +1,43 @@
 const VIRAL_REPLY_MODEL = `
-REPLY RULES (from analysis of 398 real viral X replies):
-- LENGTH IS EVERYTHING: Under 50 chars = 9x more engagement than paragraphs. Default to SHORT.
-- Top strategy: HUMOR/WIT (57.8 avg likes). Short, clever, funny observations.
-- Second: PERSONAL STORY (17.1 avg). Brief, specific, 1-2 sentences max.
-- Third: YES-AND (9.9 avg). Agree + genuinely novel angle only.
-- NEVER: mini-essays, sycophantic openers ("Great point!"), hedging ("I think maybe"), reframes ("The real question is..."), or numbered lists restating the original.
-- Lead with the punch. One idea per reply. Concrete > abstract. Match parent energy.
-- Don't explain your joke. Don't hedge your opinion. Don't qualify your take.
+REPLY RULES (from analysis of 1,150 real viral X replies - Round 2):
+
+STRATEGY RANKINGS (by avg likes):
+1. QUESTION (121.6 avg) ← #1 WINNER. Ask a genuine question, not rhetorical.
+2. YES-AND (76.7 avg) - Agree + add genuinely novel angle
+3. QUICK-REACT (68.9 avg) - Instant gut reaction, under 50 chars
+4. HUMOR/WIT (60.9 avg) - Short, clever observations
+5. FRAMEWORK/LIST (48.8 avg) - Structured insight
+[Skip the low performers: Personal story 14.4, Contrarian 11.8, Data 8.2]
+
+LENGTH IS BIMODAL - NOT just "be short":
+- <50 chars: 65.4 avg ✅
+- 50-100 chars: 35 avg ❌ AVOID (dead zone)
+- 100-200 chars: 50 avg
+- 200-400 chars: 64.8 avg ✅ (ties with ultra-short)
+- 400+ chars: 34.5 avg ❌
+Go very short OR substantive. Middle ground kills.
+
+TIMING IS CRITICAL:
+- Within 30 min: 101.5 avg likes ⭐ (4x better than late)
+- 30-120 min: 58 avg
+- 120+ min: 24.9 avg
+Speed matters more than content quality.
+
+TONE:
+- Curious: 171.3 avg likes ← Sound genuinely interested
+- Enthusiastic: 72.1 avg
+- Authoritative: 37 avg
+
+HOOKS:
+- Question hooks: 189.6 avg ← Open with a real question
+- Agreement openers: 3.2 avg ❌ ("Great point!" = death)
+
+NEVER:
+- Mini-essays, sycophantic openers, hedging, reframes, numbered lists
+- Explain your joke, hedge your opinion, qualify your take
+- Long sentences, em dashes, semicolons, bullet points
+
+ONE IDEA PER REPLY. Lead with the punch. Match parent energy.
 `;
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
