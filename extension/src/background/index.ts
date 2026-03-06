@@ -321,11 +321,31 @@ async function syncToBackend(path: string, body: object) {
 }
 
 async function handleSavePost(payload) {
+  const s = await getS();
   const data = await new Promise(r => chrome.storage.local.get({ posts: [] }, r));
   const post = { ...payload, timestamp: Date.now(), engagement: { likes: 0, retweets: 0, replies: 0, impressions: 0, lastChecked: 0 }, notes: "" };
   data.posts.unshift(post);
   if (data.posts.length > 500) data.posts = data.posts.slice(0, 500);
   await chrome.storage.local.set({ posts: data.posts });
+
+  // Sync to local draft receiver (for engagement tracking pipeline)
+  try {
+    await fetch("http://127.0.0.1:9847/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId: post.postId,
+        postAuthor: post.postAuthor,
+        postText: post.postText,
+        replyText: post.replyText,
+        promptId: post.promptId,
+        tone: post.tone,
+        model: s.selectedModel || "unknown",
+      }),
+    });
+  } catch (err) {
+    console.warn("Local draft receiver not running (non-blocking):", err.message);
+  }
 
   // Sync to backend (fire-and-forget)
   syncToBackend("/api/posts", {
