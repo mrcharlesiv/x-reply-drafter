@@ -1,3 +1,14 @@
+const VIRAL_REPLY_MODEL = `
+REPLY RULES (from analysis of 398 real viral X replies):
+- LENGTH IS EVERYTHING: Under 50 chars = 9x more engagement than paragraphs. Default to SHORT.
+- Top strategy: HUMOR/WIT (57.8 avg likes). Short, clever, funny observations.
+- Second: PERSONAL STORY (17.1 avg). Brief, specific, 1-2 sentences max.
+- Third: YES-AND (9.9 avg). Agree + genuinely novel angle only.
+- NEVER: mini-essays, sycophantic openers ("Great point!"), hedging ("I think maybe"), reframes ("The real question is..."), or numbered lists restating the original.
+- Lead with the punch. One idea per reply. Concrete > abstract. Match parent energy.
+- Don't explain your joke. Don't hedge your opinion. Don't qualify your take.
+`;
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "DRAFT_REPLY") { handleDraftReply(message.payload).then(sendResponse).catch(err => sendResponse({ error: err.message })); return true; }
   if (message.type === "SAVE_POST") { handleSavePost(message.payload); return false; }
@@ -25,6 +36,8 @@ function buildSysPrompt(tone, custom) {
   return `You are a skilled X (Twitter) reply writer.
 
 ${baseTone}
+
+${VIRAL_REPLY_MODEL}
 
 Rules:
 - Keep it concise (under 280 characters preferred)
