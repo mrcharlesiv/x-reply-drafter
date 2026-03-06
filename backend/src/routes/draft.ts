@@ -65,10 +65,19 @@ ${base}
 
 ${VIRAL_REPLY_MODEL}
 
+YOUR GENERATION PRIORITY (FOLLOW THIS ORDER):
+1. FIRST: Try to ask a genuine question (121.6 avg likes). This wins consistently.
+2. If no good question fits: Use YES-AND (agree + add novel angle)
+3. If that doesn't fit: Use QUICK-REACT (instant gut reaction, <50 chars)
+4. Last resort: HUMOR/WIT (only if other strategies won't work)
+
+DO NOT default to humor. DO NOT use sarcasm. DO NOT be clever for cleverness's sake.
+PRIORITIZE questions. Ask what the original post makes you genuinely curious about.
+
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
 
 Rules:
-- Keep replies concise (under 280 characters when possible)
+- Keep replies concise (under 280 characters when possible, or go 200-400 for substance)
 - Sound human, not like AI
 - No hashtags unless they add real value
 - Match the energy of the original post
