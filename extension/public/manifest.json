@@ -11,9 +11,8 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
-    "https://*.openai.com/*",
-    "https://*.anthropic.com/*",
-    "https://*/*"
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

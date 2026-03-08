@@ -276,7 +276,10 @@ export default function Settings() {
           <input className="input" type="password" placeholder={"Enter " + editProvider + " API key"} value={editKey} onChange={e => setEditKey(e.target.value)} />
 
           {editProvider === "custom" && (
-            <input className="input" type="url" placeholder="API Base URL" value={editBaseUrl} onChange={e => setEditBaseUrl(e.target.value)} />
+            <>
+              <input className="input" type="url" placeholder="API Base URL" value={editBaseUrl} onChange={e => setEditBaseUrl(e.target.value)} />
+              <p className="help-text" style={{ color: "#f59e0b" }}>⚠️ Custom API endpoints require manual site access grant in Chrome: <strong>chrome://extensions</strong> → X Reply Drafter → <strong>Site Access</strong> → add your API domain.</p>
+            </>
           )}
 
           <div className="model-selector">
@@ -319,6 +322,7 @@ export default function Settings() {
         <h3>Backend URL (Optional)</h3>
         <input className="input" type="url" placeholder="https://your-backend.vercel.app" value={backendUrl} onChange={e => setBackendUrl(e.target.value)} />
         <p className="help-text">For syncing drafts + engagement data.</p>
+        <p className="help-text" style={{ color: "#f59e0b" }}>⚠️ Custom backend URLs require you to manually grant site access in Chrome: go to <strong>chrome://extensions</strong> → X Reply Drafter → <strong>Site Access</strong> → add your backend domain.</p>
       </div>
 
       <button className="btn btn-primary btn-full" onClick={handleSaveOther}>Save Settings</button>
